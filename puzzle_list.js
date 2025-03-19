@@ -1,4 +1,6 @@
 window.puzzleList = [
+"JRDJVN7QHumanity - Perceive",
+"3W7GYHXSUnnamed Puzzle",
 "9V5DTHJ2Tiles and Tetrominoes",
 "X59L6XKLUnnamed Horizontal Symmetry Puzzle",
 "SGM9SGTALimited Options #5",

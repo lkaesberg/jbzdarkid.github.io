@@ -456,15 +456,30 @@ bool Puzzle::validate() {
             continue;
         }
 
-        // If there are negations but no invalid elements, the negations themselves are invalid
-        if (regionInvalidElements.empty()) {
-            return false;
+        // Handle negations
+        // First, pair up negations that can cancel each other
+        int remainingNegations = negations.size();
+        if (remainingNegations >= 2) {
+            // Each pair of negations can cancel each other
+            remainingNegations = remainingNegations % 2;
         }
 
-        // Each negation must cancel exactly one invalid element
-        // If we have more negations than invalid elements or vice versa, the puzzle is invalid
-        if (negations.size() != regionInvalidElements.size()) {
-            return false;
+        // Any remaining negations must each cancel exactly one invalid element
+        if (remainingNegations > 0) {
+            // If there are no invalid elements but we have remaining negations, the puzzle is invalid
+            if (regionInvalidElements.empty()) {
+                return false;
+            }
+
+            // Each remaining negation must cancel exactly one invalid element
+            if (remainingNegations != regionInvalidElements.size()) {
+                return false;
+            }
+        } else {
+            // If all negations cancelled each other, there should be no invalid elements
+            if (!regionInvalidElements.empty()) {
+                return false;
+            }
         }
     }
     

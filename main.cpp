@@ -39,9 +39,20 @@ const std::string EXAMPLE_PUZZLE2 = R"({
     "pillar": false
 })";
 
+const std::string EXAMPLE_PUZZLE3 = R"({
+    "grid": [
+        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}],
+        [{"line": 0}, {"type": "nega"},{"line": 0}, null, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
+        [{"line": 0},{"type": "nega"}, {"line": 0}, {"type": "nega"}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}]
+    ],
+    "pillar": false
+})";
+
 int main() {
     try {
-        auto puzzleString = EXAMPLE_PUZZLE;
+        auto puzzleString = EXAMPLE_PUZZLE3;
         // Start timing puzzle loading
         auto loadStart = std::chrono::high_resolution_clock::now();
         auto puzzle = Puzzle::deserialize(puzzleString);

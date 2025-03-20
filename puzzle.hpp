@@ -31,6 +31,11 @@ constexpr int PATH_RIGHT = 2;
 constexpr int PATH_TOP = 3;
 constexpr int PATH_BOTTOM = 4;
 
+// Constants for negation types
+constexpr int NEGA_NONE = 0;
+constexpr int NEGA_BLACK = 1;
+constexpr int NEGA_WHITE = 2;
+
 // Forward declarations
 class Cell;
 class Puzzle;
@@ -48,6 +53,7 @@ public:
     int count = 0;
     int polyshape = 0;
     std::string dir;
+    int nega = NEGA_NONE;  // Added negation type
 };
 
 // Main puzzle class that represents the entire puzzle grid

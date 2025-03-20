@@ -196,18 +196,6 @@ bool Solver::validatePath(const Path& path) {
         }
     }
     
-    // Check for uncovered dots
-    for (int x = 0; x < testPuzzle->getActualWidth(); x++) {
-        for (int y = 0; y < testPuzzle->getActualHeight(); y++) {
-            if (auto cell = testPuzzle->getCell(x, y)) {
-                if (cell->dot > DOT_NONE && cell->line == LINE_NONE) {
-                    std::cout << "Found uncovered dot at " << x << "," << y << std::endl;
-                    return false;
-                }
-            }
-        }
-    }
-    
     // Validate the resulting puzzle state
     return testPuzzle->validate();
 }

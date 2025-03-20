@@ -11,17 +11,40 @@ const std::string EXAMPLE_PUZZLE = R"({
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
         [{"line": 0}, {"type": "square", "color": 1}, {"line": 0}, {"type": "square", "color": 1}, {"line": 0}],
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}],
-        [{"line": 0}, {"type": "triangle", "color": 3, "count": 1}, {"line": 0}, {"type": "star", "color": 3}, {"line": 0}],
+        [{"line": 0}, {"type": "triangle", "color": 3, "count": 1}, {"line": 0}, {"type": "nega"}, {"line": 0}],
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}]
+    ],
+    "pillar": false
+})";
+
+const std::string EXAMPLE_PUZZLE1 = R"({
+    "grid": [
+        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}],
+        [{"line": 0}, null,{"line": 0}, null, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
+        [{"line": 0},null, {"line": 0}, {"type": "nega"}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}]
+    ],
+    "pillar": false
+})";
+
+const std::string EXAMPLE_PUZZLE2 = R"({
+    "grid": [
+        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}],
+        [{"line": 0}, null,{"line": 0, "dot": 1}, null, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
+        [{"line": 0},null, {"line": 0}, null, {"line": 0}],
+        [{"line": 0, "dot": 1}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}, {"end": "bottom"}]
     ],
     "pillar": false
 })";
 
 int main() {
     try {
+        auto puzzleString = EXAMPLE_PUZZLE;
         // Start timing puzzle loading
         auto loadStart = std::chrono::high_resolution_clock::now();
-        auto puzzle = Puzzle::deserialize(EXAMPLE_PUZZLE);
+        auto puzzle = Puzzle::deserialize(puzzleString);
         auto loadEnd = std::chrono::high_resolution_clock::now();
         auto loadDuration = std::chrono::duration_cast<std::chrono::microseconds>(loadEnd - loadStart);
         
@@ -53,7 +76,7 @@ int main() {
             std::cout << std::endl;
             
             // Draw solution on board
-            auto solutionPuzzle = Puzzle::deserialize(EXAMPLE_PUZZLE);
+            auto solutionPuzzle = Puzzle::deserialize(puzzleString);
             for (const auto& pos : solutions[i].positions) {
                 solutionPuzzle->updateCell(pos.first, pos.second, "line", LINE_BLACK);
             }

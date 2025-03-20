@@ -108,6 +108,21 @@ std::unique_ptr<Puzzle> Puzzle::deserialize(const std::string& jsonStr) {
                     if (cell.contains("dot")) {
                         targetCell.dot = cell["dot"];
                     }
+                    // Handle negation symbols
+                    if (cell.contains("type") && cell["type"] == "nega") {
+                        if (cell.contains("color")) {
+                            std::string color = cell["color"];
+                            if (color == "white") {
+                                targetCell.nega = NEGA_WHITE;
+                            } else if (color == "black") {
+                                targetCell.nega = NEGA_BLACK;
+                            } else {
+                                targetCell.nega = NEGA_BLACK; // Default to black if invalid color
+                            }
+                        } else {
+                            targetCell.nega = NEGA_BLACK; // Default to black if no color specified
+                        }
+                    }
                 } catch (const std::exception& e) {
                     std::cerr << "Error processing cell at " << x << "," << y << ": " << e.what() << std::endl;
                     throw;
@@ -146,6 +161,10 @@ std::string Puzzle::serialize() const {
             if (cell.line != LINE_NONE) cellJson["line"] = cell.line;
             if (cell.gap != GAP_NONE) cellJson["gap"] = cell.gap;
             if (cell.dot != DOT_NONE) cellJson["dot"] = cell.dot;
+            // Add negation information
+            if (cell.nega != NEGA_NONE) {
+                cellJson["color"] = (cell.nega == NEGA_WHITE) ? "white" : "black";
+            }
             rowJson.push_back(cellJson);
         }
         gridJson.push_back(rowJson);
@@ -341,6 +360,7 @@ bool Puzzle::validate() {
             }
         }
     }
+
     
     // Get all regions
     auto regions = getRegions();
@@ -350,31 +370,28 @@ bool Puzzle::validate() {
         std::vector<std::pair<int, int>> squares;
         std::vector<std::pair<int, int>> stars;
         std::vector<std::pair<int, int>> triangles;
+        std::vector<std::pair<int, int>> negations;
         std::map<int, int> coloredObjects;  // color -> count
         int squareColor = -1;  // -1 means no squares found yet
-        bool hasColoredObject = false;
+        std::vector<std::pair<int, int>> regionInvalidElements;
         
-        // Check each cell in the region
+        // First pass: collect all symbols and check for uncovered dots
         for (const auto& [x, y] : region) {
             Cell* cell = getCell(x, y);
             if (!cell) continue;
             
-            // Check for uncovered dots
-            if (cell->dot && cell->line == LINE_NONE) {
-                std::cout << "Found uncovered dot at " << x << "," << y << std::endl;
-                return false;
+            // Check for uncovered dots in this region
+            if (cell->dot) {
+                if (cell->line == LINE_NONE) {
+                    regionInvalidElements.push_back({x, y});
+                }
             }
             
             // Only check colored objects at odd coordinates
             if (x % 2 == 1 && y % 2 == 1) {
                 if (cell->type == "square") {
-                    hasColoredObject = true;
                     if (squareColor == -1) {
                         squareColor = cell->color;
-                    }
-                    else if (squareColor != cell->color) {
-                        std::cout << "Found squares of different colors in same region" << std::endl;
-                        return false;
                     }
                     squares.push_back({x, y});
                     coloredObjects[cell->color]++;
@@ -385,28 +402,36 @@ bool Puzzle::validate() {
                 }
                 else if (cell->type == "triangle") {
                     triangles.push_back({x, y});
-                    coloredObjects[cell->color]++; // Count triangle's color
+                }
+                else if (cell->type == "nega") {
+                    negations.push_back({x, y});
                 }
             }
         }
 
-        // Validate stars
-        for (const auto& [x, y] : stars) {
+        // Second pass: check for invalid elements
+        // Check squares of different colors
+        for (const auto& [x, y] : squares) {
             Cell* cell = getCell(x, y);
-            if (!cell) continue;
-            
-            int count = coloredObjects[cell->color];
-            if (count == 1) {
-                std::cout << "Found a star at " << x << "," << y << " in a region with only 1 object of its color" << std::endl;
-                return false;
-            }
-            else if (count > 2) {
-                std::cout << "Found a star at " << x << "," << y << " in a region with " << count << " objects of its color" << std::endl;
-                return false;
+            if (cell && cell->color != squareColor) {
+                regionInvalidElements.push_back({x, y});
             }
         }
 
-        // Validate triangles
+        // Check stars (must come in pairs)
+        for (const auto& [color, count] : coloredObjects) {
+            if (count == 1 || count > 2) {
+                // Add all stars of this color to invalid elements
+                for (const auto& [x, y] : stars) {
+                    Cell* cell = getCell(x, y);
+                    if (cell && cell->color == color) {
+                        regionInvalidElements.push_back({x, y});
+                    }
+                }
+            }
+        }
+
+        // Check triangles
         for (const auto& [x, y] : triangles) {
             Cell* cell = getCell(x, y);
             if (!cell) continue;
@@ -419,9 +444,27 @@ bool Puzzle::validate() {
             if (getCell(x, y + 1) && getCell(x, y + 1)->line != LINE_NONE) adjacentLines++;
             
             if (adjacentLines != cell->count) {
-                std::cout << "Triangle at " << x << "," << y << " has " << adjacentLines << " adjacent lines but count is " << cell->count << std::endl;
+                regionInvalidElements.push_back({x, y});
+            }
+        }
+
+        // If there are no negations in this region, check if there are any invalid elements
+        if (negations.empty()) {
+            if (!regionInvalidElements.empty()) {
                 return false;
             }
+            continue;
+        }
+
+        // If there are negations but no invalid elements, the negations themselves are invalid
+        if (regionInvalidElements.empty()) {
+            return false;
+        }
+
+        // Each negation must cancel exactly one invalid element
+        // If we have more negations than invalid elements or vice versa, the puzzle is invalid
+        if (negations.size() != regionInvalidElements.size()) {
+            return false;
         }
     }
     
@@ -465,6 +508,9 @@ void Puzzle::printBoard() const {
             } else if (cell.type == "triangle") {
                 // Print triangles with their count
                 std::cout << "△" << cell.count;
+            } else if (cell.type == "nega") {
+                // Print negation symbols (N for black, n for white)
+                std::cout << (cell.nega == NEGA_WHITE ? "n " : "N ");
             } else {
                 std::cout << "  ";
             }

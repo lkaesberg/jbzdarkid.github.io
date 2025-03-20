@@ -6,11 +6,13 @@
 
 const std::string EXAMPLE_PUZZLE = R"({
     "grid": [
-        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
-        [{"line": 0}, {"type": "square", "color": 2}, {"line": 0}, {"type": "square", "color": 1}, {"line": 0}],
+        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}],
+        [{"line": 0}, {"type": "star", "color": 2}, {"line": 0}, {"type": "star", "color": 2}, {"line": 0}],
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
         [{"line": 0}, {"type": "square", "color": 1}, {"line": 0}, {"type": "square", "color": 1}, {"line": 0}],
-        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}]
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}],
+        [{"line": 0}, {"type": "triangle", "color": 3, "count": 1}, {"line": 0}, {"type": "star", "color": 3}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}]
     ],
     "pillar": false
 })";

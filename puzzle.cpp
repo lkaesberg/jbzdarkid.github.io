@@ -348,6 +348,9 @@ bool Puzzle::validate() {
     // Check each region
     for (const auto& region : regions) {
         std::vector<std::pair<int, int>> squares;
+        std::vector<std::pair<int, int>> stars;
+        std::vector<std::pair<int, int>> triangles;
+        std::map<int, int> coloredObjects;  // color -> count
         int squareColor = -1;  // -1 means no squares found yet
         bool hasColoredObject = false;
         
@@ -374,7 +377,50 @@ bool Puzzle::validate() {
                         return false;
                     }
                     squares.push_back({x, y});
+                    coloredObjects[cell->color]++;
                 }
+                else if (cell->type == "star") {
+                    stars.push_back({x, y});
+                    coloredObjects[cell->color]++;
+                }
+                else if (cell->type == "triangle") {
+                    triangles.push_back({x, y});
+                    coloredObjects[cell->color]++; // Count triangle's color
+                }
+            }
+        }
+
+        // Validate stars
+        for (const auto& [x, y] : stars) {
+            Cell* cell = getCell(x, y);
+            if (!cell) continue;
+            
+            int count = coloredObjects[cell->color];
+            if (count == 1) {
+                std::cout << "Found a star at " << x << "," << y << " in a region with only 1 object of its color" << std::endl;
+                return false;
+            }
+            else if (count > 2) {
+                std::cout << "Found a star at " << x << "," << y << " in a region with " << count << " objects of its color" << std::endl;
+                return false;
+            }
+        }
+
+        // Validate triangles
+        for (const auto& [x, y] : triangles) {
+            Cell* cell = getCell(x, y);
+            if (!cell) continue;
+            
+            // Count adjacent lines
+            int adjacentLines = 0;
+            if (getCell(x - 1, y) && getCell(x - 1, y)->line != LINE_NONE) adjacentLines++;
+            if (getCell(x + 1, y) && getCell(x + 1, y)->line != LINE_NONE) adjacentLines++;
+            if (getCell(x, y - 1) && getCell(x, y - 1)->line != LINE_NONE) adjacentLines++;
+            if (getCell(x, y + 1) && getCell(x, y + 1)->line != LINE_NONE) adjacentLines++;
+            
+            if (adjacentLines != cell->count) {
+                std::cout << "Triangle at " << x << "," << y << " has " << adjacentLines << " adjacent lines but count is " << cell->count << std::endl;
+                return false;
             }
         }
     }
@@ -412,7 +458,13 @@ void Puzzle::printBoard() const {
                 std::cout << "· ";
             } else if (cell.type == "square") {
                 // Print squares with their color number
-                std::cout<< "s" << cell.color;
+                std::cout << "s" << cell.color;
+            } else if (cell.type == "star") {
+                // Print stars with their color number
+                std::cout << "*" << cell.color;
+            } else if (cell.type == "triangle") {
+                // Print triangles with their count
+                std::cout << "△" << cell.count;
             } else {
                 std::cout << "  ";
             }

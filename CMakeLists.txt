@@ -18,6 +18,7 @@ add_executable(puzzle_solver
     main.cpp
     puzzle.cpp
     solver.cpp
+    polyomino.cpp
 )
 
 # Link against nlohmann_json

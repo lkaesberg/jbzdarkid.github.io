@@ -1,4 +1,5 @@
 #include "puzzle.hpp"
+#include "polyomino.hpp"
 #include <stdexcept>
 #include <nlohmann/json.hpp>
 #include <iostream>
@@ -371,6 +372,8 @@ bool Puzzle::validate() {
         std::vector<std::pair<int, int>> stars;
         std::vector<std::pair<int, int>> triangles;
         std::vector<std::pair<int, int>> negations;
+        std::vector<std::pair<int, int>> polys;     // Regular polyominos
+        std::vector<std::pair<int, int>> ylops;     // Inverse polyominos
         std::map<int, int> coloredObjects;  // color -> count
         int squareColor = -1;  // -1 means no squares found yet
         std::vector<std::pair<int, int>> regionInvalidElements;
@@ -405,6 +408,12 @@ bool Puzzle::validate() {
                 }
                 else if (cell->type == "nega") {
                     negations.push_back({x, y});
+                }
+                else if (cell->type == "poly") {
+                    polys.push_back({x, y});
+                }
+                else if (cell->type == "ylop") {
+                    ylops.push_back({x, y});
                 }
             }
         }
@@ -445,6 +454,292 @@ bool Puzzle::validate() {
             
             if (adjacentLines != cell->count) {
                 regionInvalidElements.push_back({x, y});
+            }
+        }
+
+        // Check polyominos and ylops
+        if (!polys.empty() || !ylops.empty()) {
+            // Count region size (only odd-coordinate cells)
+            int regionSize = 0;
+            for (const auto& pos : region) {
+                if (pos.first % 2 == 1 && pos.second % 2 == 1) {
+                    regionSize++;
+                }
+            }
+            
+            // Calculate total poly and ylop sizes
+            int polySize = 0;  // Total size of all polys
+            int ylopSize = 0;  // Total size of all ylops
+            std::vector<uint16_t> polyShapes;
+            std::vector<uint16_t> ylopShapes;
+            std::vector<std::pair<int, int>> polyPositions;
+            std::vector<std::pair<int, int>> ylopPositions;
+            
+            for (const auto& [x, y] : polys) {
+                Cell* cell = getCell(x, y);
+                if (cell && cell->polyshape > 0) {
+                    polyShapes.push_back(cell->polyshape);
+                    polyPositions.push_back({x, y});
+                    polySize += getPolySize(cell->polyshape);
+                }
+            }
+            
+            for (const auto& [x, y] : ylops) {
+                Cell* cell = getCell(x, y);
+                if (cell && cell->polyshape > 0) {
+                    ylopShapes.push_back(cell->polyshape);
+                    ylopPositions.push_back({x, y});
+                    ylopSize += getPolySize(cell->polyshape);
+                }
+            }
+            
+            // If we have polyominos or ylops, make sure they correctly fit the region
+            if (!polyShapes.empty() || !ylopShapes.empty()) {
+                std::cout << "Region size: " << regionSize << ", Poly size: " << polySize << ", Ylop size: " << ylopSize << std::endl;
+                
+                // Check if the math works out: poly_size = region_size + ylop_size
+                // (Polys must cover the original region plus the ylop extension)
+                if (polySize != regionSize + ylopSize) {
+                    std::cout << "Poly size (" << polySize << ") doesn't match region size (" << regionSize 
+                              << ") + ylop size (" << ylopSize << ") = " << (regionSize + ylopSize) << std::endl;
+                    return false;
+                }
+                
+                // Create working grid for validation
+                std::vector<std::vector<int>> workingGrid(grid.size(), std::vector<int>(grid[0].size(), 0));
+                
+                // Mark cells in the region as needing coverage (-1)
+                for (const auto& pos : region) {
+                    if (pos.first % 2 == 1 && pos.second % 2 == 1) {
+                        workingGrid[pos.first][pos.second] = -1; // Region cells start as -1
+                    }
+                }
+                
+                // Place ylops to extend the region
+                for (size_t i = 0; i < ylopShapes.size(); i++) {
+                    auto shape = ylopShapes[i];
+                    
+                    std::cout << "Placing ylop shape " << shape << std::endl;
+                    
+                    // Find all positions adjacent to the region to try placing the ylop
+                    std::vector<std::pair<int, int>> candidatePositions;
+                    
+                    // First collect all cells adjacent to the region
+                    for (const auto& pos : region) {
+                        if (pos.first % 2 == 1 && pos.second % 2 == 1) {
+                            // Check all 4 adjacent cells (if they're not in the region)
+                            std::vector<std::pair<int, int>> adjacentPositions = {
+                                {pos.first + 2, pos.second},
+                                {pos.first - 2, pos.second},
+                                {pos.first, pos.second + 2},
+                                {pos.first, pos.second - 2}
+                            };
+                            
+                            for (const auto& adjPos : adjacentPositions) {
+                                // Skip if outside grid
+                                if (adjPos.first < 0 || adjPos.second < 0 || 
+                                    adjPos.first >= static_cast<int>(grid.size()) || 
+                                    adjPos.second >= static_cast<int>(grid[0].size())) {
+                                    continue;
+                                }
+                                
+                                // Skip if part of the region
+                                bool inRegion = false;
+                                for (const auto& regionPos : region) {
+                                    if (regionPos.first == adjPos.first && regionPos.second == adjPos.second) {
+                                        inRegion = true;
+                                        break;
+                                    }
+                                }
+                                if (inRegion) continue;
+                                
+                                // Add to candidate positions
+                                bool alreadyAdded = false;
+                                for (const auto& candPos : candidatePositions) {
+                                    if (candPos.first == adjPos.first && candPos.second == adjPos.second) {
+                                        alreadyAdded = true;
+                                        break;
+                                    }
+                                }
+                                if (!alreadyAdded) {
+                                    candidatePositions.push_back(adjPos);
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If no adjacent positions, also try the original ylop position
+                    if (candidatePositions.empty() && i < ylopPositions.size()) {
+                        candidatePositions.push_back(ylopPositions[i]);
+                    }
+                    
+                    std::cout << "Found " << candidatePositions.size() << " candidate positions for ylop" << std::endl;
+                    
+                    // Try to place the ylop at any valid position
+                    bool placed = false;
+                    std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+                    
+                    for (const auto& position : candidatePositions) {
+                        for (auto rotation : rotations) {
+                            auto cells = polyominoFromPolyshape(rotation, true); // ylop=true
+                            std::vector<std::pair<int, int>> cellsToConvert;
+                            
+                            // Only mark cells outside the region
+                            bool valid = true;
+                            for (const auto& cell : cells) {
+                                int newX = position.first + cell.first;
+                                int newY = position.second + cell.second;
+                                
+                                // Skip if outside grid
+                                if (newX < 0 || newY < 0 || newX >= static_cast<int>(grid.size()) || 
+                                    newY >= static_cast<int>(grid[0].size())) {
+                                    continue;
+                                }
+                                
+                                // Only consider actual cells (odd coordinates)
+                                if (newX % 2 != 1 || newY % 2 != 1) {
+                                    continue;
+                                }
+                                
+                                // Check if in region
+                                bool inRegion = false;
+                                for (const auto& pos : region) {
+                                    if (pos.first == newX && pos.second == newY) {
+                                        inRegion = true;
+                                        break;
+                                    }
+                                }
+                                
+                                // If the cell is already in the region, this isn't valid
+                                if (inRegion) {
+                                    valid = false;
+                                    break;
+                                }
+                                
+                                // This is a cell we should convert
+                                cellsToConvert.push_back({newX, newY});
+                            }
+                            
+                            if (valid && !cellsToConvert.empty()) {
+                                // Mark cells outside the region as needing coverage (-1)
+                                for (const auto& cell : cellsToConvert) {
+                                    std::cout << "  Marking cell " << cell.first << "," << cell.second 
+                                            << " as needing coverage (ylop extension)" << std::endl;
+                                    workingGrid[cell.first][cell.second] = -1;
+                                }
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (placed) break;
+                    }
+                    
+                    if (!placed) {
+                        std::cout << "Failed to place ylop shape " << shape << " anywhere" << std::endl;
+                        return false;
+                    }
+                }
+                
+                // Place regular polyominos to provide needed coverage
+                for (size_t i = 0; i < polyShapes.size(); i++) {
+                    auto shape = polyShapes[i];
+                    
+                    std::cout << "Placing poly shape " << shape << std::endl;
+                    
+                    // Collect all cells in the region that need coverage
+                    std::vector<std::pair<int, int>> candidatePositions;
+                    for (const auto& pos : region) {
+                        if (pos.first % 2 == 1 && pos.second % 2 == 1 && workingGrid[pos.first][pos.second] == -1) {
+                            candidatePositions.push_back(pos);
+                        }
+                    }
+                    
+                    // If no positions in region, also include the extended region from ylops
+                    if (candidatePositions.empty()) {
+                        for (int x = 1; x < grid.size(); x += 2) {
+                            for (int y = 1; y < grid[0].size(); y += 2) {
+                                if (workingGrid[x][y] == -1) {
+                                    candidatePositions.push_back({x, y});
+                                }
+                            }
+                        }
+                    }
+                    
+                    // If still no positions, also try the original poly position
+                    if (candidatePositions.empty() && i < polyPositions.size()) {
+                        candidatePositions.push_back(polyPositions[i]);
+                    }
+                    
+                    std::cout << "Found " << candidatePositions.size() << " candidate positions for poly" << std::endl;
+                    
+                    // Try to place the poly at any valid position
+                    bool placed = false;
+                    std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+                    
+                    for (const auto& position : candidatePositions) {
+                        for (auto rotation : rotations) {
+                            auto cells = polyominoFromPolyshape(rotation, false);
+                            std::vector<std::pair<int, int>> cellsToUpdate;
+                            std::vector<int> originalValues;
+                            
+                            // Check if this placement is valid
+                            bool valid = true;
+                            for (const auto& cell : cells) {
+                                int newX = position.first + cell.first;
+                                int newY = position.second + cell.second;
+                                
+                                // Skip if outside grid
+                                if (newX < 0 || newY < 0 || newX >= static_cast<int>(grid.size()) || 
+                                    newY >= static_cast<int>(grid[0].size())) {
+                                    valid = false;
+                                    break;
+                                }
+                                
+                                // Only consider actual cells (odd coordinates)
+                                if (newX % 2 != 1 || newY % 2 != 1) {
+                                    continue;
+                                }
+                                
+                                // Poly can only cover cells that need coverage (-1)
+                                if (workingGrid[newX][newY] != -1) {
+                                    valid = false;
+                                    break;
+                                }
+                                
+                                // This is a cell we can update
+                                cellsToUpdate.push_back({newX, newY});
+                                originalValues.push_back(workingGrid[newX][newY]);
+                            }
+                            
+                            if (valid && !cellsToUpdate.empty()) {
+                                // Mark cells as covered (0)
+                                for (const auto& cell : cellsToUpdate) {
+                                    std::cout << "  Covering cell " << cell.first << "," << cell.second << std::endl;
+                                    workingGrid[cell.first][cell.second] = 0;
+                                }
+                                placed = true;
+                                break;
+                            }
+                        }
+                        if (placed) break;
+                    }
+                    
+                    if (!placed) {
+                        std::cout << "Failed to place poly shape " << shape << " anywhere" << std::endl;
+                        return false;
+                    }
+                }
+                
+                // Check if all cells (original region + ylop extensions) have been correctly covered
+                for (int x = 1; x < grid.size(); x += 2) {
+                    for (int y = 1; y < grid[0].size(); y += 2) {
+                        if (workingGrid[x][y] < 0) {
+                            std::cout << "Cell at " << x << "," << y 
+                                     << " not covered (value: " << workingGrid[x][y] << ")" << std::endl;
+                            return false;
+                        }
+                    }
+                }
             }
         }
 
@@ -526,6 +821,14 @@ void Puzzle::printBoard() const {
             } else if (cell.type == "nega") {
                 // Print negation symbols (N for black, n for white)
                 std::cout << (cell.nega == NEGA_WHITE ? "n " : "N ");
+            } else if (cell.type == "poly") {
+                // Print polyominos with P and show size
+                int size = getPolySize(cell.polyshape);
+                std::cout << "P" << size;
+            } else if (cell.type == "ylop") {
+                // Print ylops with Y and show size
+                int size = getPolySize(cell.polyshape);
+                std::cout << "Y" << size;
             } else {
                 std::cout << "  ";
             }
@@ -533,6 +836,47 @@ void Puzzle::printBoard() const {
         std::cout << "\n";
     }
     std::cout << "\n";
-} 
+}
+
+// Recursive function to place polyominos in their region
+bool Puzzle::placeShapesRecursively(const std::vector<std::pair<int, int>>& positions,
+                                  std::vector<std::vector<int>>& grid,
+                                  const std::vector<uint16_t>& shapes,
+                                  const std::vector<std::pair<int, int>>& region,
+                                  size_t shapeIndex) {
+    // Base case: all shapes have been placed
+    if (shapeIndex >= shapes.size()) {
+        return true;
+    }
+    
+    // Get the current shape to place
+    uint16_t shape = shapes[shapeIndex];
+    
+    // Try all rotations of the shape
+    std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+    
+    // Try placing the polyomino at each possible position in the region
+    for (const auto& position : positions) {
+        for (auto rotation : rotations) {
+            // Generate cell coordinates for this shape based on rotation
+            auto cells = polyominoFromPolyshape(rotation, false);
+            
+            // Try to place the shape at this position
+            // Polys add +1 to cells, canceling out the -1
+            if (tryPlacePolyshape(cells, position.first, position.second, grid, 1, region)) {
+                // Recursively try to place the remaining shapes
+                if (placeShapesRecursively(positions, grid, shapes, region, shapeIndex + 1)) {
+                    return true;
+                }
+                
+                // If placing remaining shapes failed, undo this placement
+                tryPlacePolyshape(cells, position.first, position.second, grid, -1, region);
+            }
+        }
+    }
+    
+    // No valid placement found for all shapes
+    return false;
+}
 
 

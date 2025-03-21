@@ -4,6 +4,7 @@
 #include <string>
 #include <memory>
 #include <nlohmann/json.hpp>
+#include <cstdint>
 
 using json = nlohmann::json;
 
@@ -51,7 +52,7 @@ public:
     std::string type;
     int color = 0;
     int count = 0;
-    int polyshape = 0;
+    uint16_t polyshape = 0;
     std::string dir;
     int nega = NEGA_NONE;  // Added negation type
 };
@@ -72,6 +73,11 @@ public:
     
     // Validation
     bool validate();
+    bool placeShapesRecursively(const std::vector<std::pair<int, int>>& positions, 
+                              std::vector<std::vector<int>>& grid,
+                              const std::vector<uint16_t>& shapes,
+                              const std::vector<std::pair<int, int>>& region,
+                              size_t shapeIndex = 0);
     
     // Getters
     int getWidth() const { return width; }

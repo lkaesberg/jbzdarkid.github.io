@@ -64,6 +64,19 @@ const std::string EXAMPLE_PUZZLE4 = R"({
     "pillar": false
 })";
 
+const std::string EXAMPLE_PUZZLE5 = R"({
+    "grid": [
+        [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0, "dot": 1}, {"line": 0}],
+        [{"line": 0}, {"type": "star", "color": 2}, {"line": 0}, {"type": "star", "color": 2}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
+        [{"line": 0}, {"type": "square", "color": 1}, {"line": 0}, {"type": "square", "color": 1}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}],
+        [{"line": 0}, {"type": "nega"}, {"line": 0}, {"type": "poly", "polyshape": 19}, {"line": 0}],
+        [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}]
+    ],
+    "pillar": false
+})";
+
 // Example puzzle with polyominos
 const std::string POLY_PUZZLE = R"({
     "grid": [

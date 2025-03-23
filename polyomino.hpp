@@ -13,11 +13,11 @@ constexpr int POLY_YLOP = 2;
 constexpr uint32_t ROTATION_BIT = 1 << 20;
 
 // Functions for bit manipulation of polyshapes
-inline uint16_t mask(int x, int y) {
+inline uint32_t mask(int x, int y) {
     return 1 << (x * 4 + y);  // Same bit ordering as JS implementation
 }
 
-inline bool isSet(uint16_t polyshape, int x, int y) {
+inline bool isSet(uint32_t polyshape, int x, int y) {
     if (x < 0 || y < 0) return false;
     if (x >= 4 || y >= 4) return false;
     return (polyshape & mask(x, y)) != 0;
@@ -29,19 +29,19 @@ inline bool isRotated(uint32_t polyshape) {
 }
 
 // Get the size of a polyshape (number of cells)
-int getPolySize(uint16_t polyshape);
+int getPolySize(uint32_t polyshape);
 
 // Get all rotations of a polyshape
-std::vector<uint16_t> getRotations(uint16_t polyshape);
+std::vector<uint32_t> getRotations(uint32_t polyshape);
 
 // Rotate a polyshape by a specified number of 90-degree rotations
-uint16_t rotatePolyshape(uint16_t polyshape, int count = 1);
+uint32_t rotatePolyshape(uint32_t polyshape, int count = 1);
 
 // Convert a polyshape to a list of cell coordinates
-std::vector<std::pair<int, int>> polyominoFromPolyshape(uint16_t polyshape, bool ylop = false, bool precise = true);
+std::vector<std::pair<int, int>> polyominoFromPolyshape(uint32_t polyshape, bool ylop = false, bool precise = true);
 
 // Convert a list of cell coordinates to a polyshape
-uint16_t polyshapeFromPolyomino(const std::vector<std::pair<int, int>>& polyomino);
+uint32_t polyshapeFromPolyomino(const std::vector<std::pair<int, int>>& polyomino);
 
 // Try to place a polyshape on the grid
 bool tryPlacePolyshape(const std::vector<std::pair<int, int>>& cells, int x, int y, 
@@ -52,5 +52,5 @@ bool tryPlacePolyshape(const std::vector<std::pair<int, int>>& cells, int x, int
 bool placePolys(const std::vector<std::pair<int, int>>& region,
                 std::vector<std::vector<int>>& grid,
                 const std::vector<std::pair<int, int>>& polyPositions,
-                const std::vector<uint16_t>& polyShapes,
+                const std::vector<uint32_t>& polyShapes,
                 size_t polyIndex = 0); 

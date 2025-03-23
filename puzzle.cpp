@@ -99,6 +99,9 @@ std::unique_ptr<Puzzle> Puzzle::deserialize(const std::string& jsonStr) {
                     }
                     if (cell.contains("polyshape")) {
                         targetCell.polyshape = cell["polyshape"];
+                        if (cell.contains("type") && (cell["rotate"] == 1)) {
+                            targetCell.polyshape |= ROTATION_BIT;
+                        }
                     }
                     if (cell.contains("line")) {
                         targetCell.line = cell["line"];
@@ -470,8 +473,8 @@ bool Puzzle::validate() {
             // Calculate total poly and ylop sizes
             int polySize = 0;  // Total size of all polys
             int ylopSize = 0;  // Total size of all ylops
-            std::vector<uint16_t> polyShapes;
-            std::vector<uint16_t> ylopShapes;
+            std::vector<uint32_t> polyShapes;
+            std::vector<uint32_t> ylopShapes;
             std::vector<std::pair<int, int>> polyPositions;
             std::vector<std::pair<int, int>> ylopPositions;
             
@@ -495,13 +498,10 @@ bool Puzzle::validate() {
             
             // If we have polyominos or ylops, make sure they correctly fit the region
             if (!polyShapes.empty() || !ylopShapes.empty()) {
-                std::cout << "Region size: " << regionSize << ", Poly size: " << polySize << ", Ylop size: " << ylopSize << std::endl;
-                
+
                 // Check if the math works out: poly_size = region_size + ylop_size
                 // (Polys must cover the original region plus the ylop extension)
                 if (polySize != regionSize + ylopSize) {
-                    std::cout << "Poly size (" << polySize << ") doesn't match region size (" << regionSize 
-                              << ") + ylop size (" << ylopSize << ") = " << (regionSize + ylopSize) << std::endl;
                     
                     // Instead of immediately returning false, mark all polys and ylops as invalid
                     for (const auto& pos : polys) {
@@ -580,11 +580,9 @@ bool Puzzle::validate() {
                             candidatePositions.push_back(ylopPositions[i]);
                         }
                         
-                        std::cout << "Found " << candidatePositions.size() << " candidate positions for ylop" << std::endl;
-                        
                         // Try to place the ylop at any valid position
                         bool placed = false;
-                        std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+                        std::vector<uint32_t> rotations = getRotations(shape);
                         
                         for (const auto& position : candidatePositions) {
                             for (auto rotation : rotations) {
@@ -659,8 +657,6 @@ bool Puzzle::validate() {
                         for (size_t i = 0; i < polyShapes.size(); i++) {
                             auto shape = polyShapes[i];
                             
-                            std::cout << "Placing poly shape " << shape << std::endl;
-                            
                             // Collect all cells in the region that need coverage
                             std::vector<std::pair<int, int>> candidatePositions;
                             for (const auto& pos : region) {
@@ -685,11 +681,9 @@ bool Puzzle::validate() {
                                 candidatePositions.push_back(polyPositions[i]);
                             }
                             
-                            std::cout << "Found " << candidatePositions.size() << " candidate positions for poly" << std::endl;
-                            
                             // Try to place the poly at any valid position
                             bool placed = false;
-                            std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+                            std::vector<uint32_t> rotations = getRotations(shape);
                             
                             for (const auto& position : candidatePositions) {
                                 for (auto rotation : rotations) {
@@ -729,7 +723,6 @@ bool Puzzle::validate() {
                                     if (valid && !cellsToUpdate.empty()) {
                                         // Mark cells as covered (0)
                                         for (const auto& cell : cellsToUpdate) {
-                                            std::cout << "  Covering cell " << cell.first << "," << cell.second << std::endl;
                                             workingGrid[cell.first][cell.second] = 0;
                                         }
                                         placed = true;
@@ -740,7 +733,6 @@ bool Puzzle::validate() {
                             }
                             
                             if (!placed) {
-                                std::cout << "Failed to place poly shape " << shape << " anywhere" << std::endl;
                                 // Mark the poly as invalid and continue
                                 if (i < polyPositions.size()) {
                                     regionInvalidElements.push_back(polyPositions[i]);
@@ -877,7 +869,7 @@ void Puzzle::printBoard() const {
 // Recursive function to place polyominos in their region
 bool Puzzle::placeShapesRecursively(const std::vector<std::pair<int, int>>& positions,
                                   std::vector<std::vector<int>>& grid,
-                                  const std::vector<uint16_t>& shapes,
+                                  const std::vector<uint32_t>& shapes,
                                   const std::vector<std::pair<int, int>>& region,
                                   size_t shapeIndex) {
     // Base case: all shapes have been placed
@@ -886,10 +878,10 @@ bool Puzzle::placeShapesRecursively(const std::vector<std::pair<int, int>>& posi
     }
     
     // Get the current shape to place
-    uint16_t shape = shapes[shapeIndex];
+    uint32_t shape = shapes[shapeIndex];
     
     // Try all rotations of the shape
-    std::vector<uint16_t> rotations = getRotations(shape | ROTATION_BIT);
+    std::vector<uint32_t> rotations = getRotations(shape);
     
     // Try placing the polyomino at each possible position in the region
     for (const auto& position : positions) {

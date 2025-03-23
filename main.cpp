@@ -92,7 +92,7 @@ const std::string POLY_PUZZLE = R"({
 const std::string POLY_PUZZLE2 = R"({
     "grid": [
         [{"start": true, "line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
-        [{"line": 0}, {"type": "poly", "polyshape": 3}, {"line": 0}, null, {"line": 0}],
+        [{"line": 0}, {"type": "poly", "polyshape": 3, "rotate": 0}, {"line": 0}, null, {"line": 0}],
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}],
         [{"line": 0}, null, {"line": 0}, null, {"line": 0}],
         [{"line": 0}, {"line": 0}, {"line": 0}, {"line": 0}, {"end": "bottom"}]

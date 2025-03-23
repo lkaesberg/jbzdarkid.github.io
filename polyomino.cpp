@@ -3,7 +3,7 @@
 #include <limits>
 
 // Count the number of cells in a polyshape
-int getPolySize(uint16_t polyshape) {
+int getPolySize(uint32_t polyshape) {
     int size = 0;
     for (int x = 0; x < 4; x++) {
         for (int y = 0; y < 4; y++) {
@@ -14,12 +14,12 @@ int getPolySize(uint16_t polyshape) {
 }
 
 // Get all rotations of a polyshape
-std::vector<uint16_t> getRotations(uint16_t polyshape) {
+std::vector<uint32_t> getRotations(uint32_t polyshape) {
     if (!isRotated(polyshape)) {
         return {polyshape}; // If not marked as rotatable, return only the original shape
     }
 
-    std::vector<uint16_t> rotations(4, 0);
+    std::vector<uint32_t> rotations(4, 0);
     
     // Generate all 4 possible 90-degree rotations
     for (int x = 0; x < 4; x++) {
@@ -37,13 +37,13 @@ std::vector<uint16_t> getRotations(uint16_t polyshape) {
 }
 
 // Rotate a polyshape by a specified number of 90-degree rotations
-uint16_t rotatePolyshape(uint16_t polyshape, int count) {
+uint32_t rotatePolyshape(uint32_t polyshape, int count) {
     auto rotations = getRotations(polyshape | ROTATION_BIT);
     return rotations[count % 4];
 }
 
 // Convert a polyshape to a list of cell coordinates
-std::vector<std::pair<int, int>> polyominoFromPolyshape(uint16_t polyshape, bool ylop, bool precise) {
+std::vector<std::pair<int, int>> polyominoFromPolyshape(uint32_t polyshape, bool ylop, bool precise) {
     std::vector<std::pair<int, int>> polyomino;
     
     // Find the top-left cell
@@ -95,7 +95,7 @@ std::vector<std::pair<int, int>> polyominoFromPolyshape(uint16_t polyshape, bool
 }
 
 // Convert a list of cell coordinates to a polyshape
-uint16_t polyshapeFromPolyomino(const std::vector<std::pair<int, int>>& polyomino) {
+uint32_t polyshapeFromPolyomino(const std::vector<std::pair<int, int>>& polyomino) {
     // Find the top-left cell
     int minX = std::numeric_limits<int>::max();
     int minY = std::numeric_limits<int>::max();
@@ -110,7 +110,7 @@ uint16_t polyshapeFromPolyomino(const std::vector<std::pair<int, int>>& polyomin
     
     if (minX == std::numeric_limits<int>::max()) return 0; // Empty polyomino
     
-    uint16_t polyshape = 0;
+    uint32_t polyshape = 0;
     for (const auto& pos : polyomino) {
         if (pos.first % 2 != 1 || pos.second % 2 != 1) continue;
         
@@ -177,7 +177,7 @@ bool tryPlacePolyshape(const std::vector<std::pair<int, int>>& cells, int x, int
 bool placePolys(const std::vector<std::pair<int, int>>& region,
                 std::vector<std::vector<int>>& grid,
                 const std::vector<std::pair<int, int>>& polyPositions,
-                const std::vector<uint16_t>& polyShapes,
+                const std::vector<uint32_t>& polyShapes,
                 size_t polyIndex) {
     // Base case: all polyominos placed
     if (polyIndex >= polyShapes.size()) {
@@ -193,7 +193,7 @@ bool placePolys(const std::vector<std::pair<int, int>>& region,
     }
     
     // Get the next polyomino to place
-    uint16_t polyShape = polyShapes[polyIndex];
+    uint32_t polyShape = polyShapes[polyIndex];
     
     // Try each rotation
     auto rotations = getRotations(polyShape | ROTATION_BIT);
